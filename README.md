@@ -1,6 +1,6 @@
 # Meetlook SMS
 This is easy messenger writed in Python with PyQt6, MySQL and other
-# How open my Meetlook SMS Server?
+# How make my Meetlook SMS Server?
 1) Install OpenServer on Your PC with Windows 10 or 11
 2) Activate phpMyAdmin in OpenServer
 3) Load my Data Base in phpMyAdmin
