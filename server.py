@@ -1,6 +1,7 @@
 import socket
 import threading
 import mysql.connector
+import bcrypt
 
 # Подключение к базе данных
 db = mysql.connector.connect(
@@ -48,13 +49,15 @@ def broadcast(message):
 def login(username, password):
     cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
     user = cursor.fetchone()
-    if user and password == user[2]:  # user[2] - это поле с паролем
+    if user and bcrypt.checkpw(password.encode('utf-8'), user[2].encode('utf-8')):  # Проверка хэша пароля
         return True
     return False
 
 def register(username, password):
     try:
-        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
+        # Хэширование пароля с добавлением соли
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password.decode('utf-8')))
         db.commit()
         return True
     except mysql.connector.Error:

@@ -48,21 +48,22 @@ class LoginRegisterWindow(QtWidgets.QWidget):
         threading.Thread(target=self.check_register_response, args=(f"/register {username} {password}",), daemon=True).start()
 
     def check_login_response(self, message):
+        print(f"Отправка сообщения: {message}")  # Отладочный вывод
         self.client_socket.send(message.encode('utf-8'))
         response = self.client_socket.recv(1024).decode('utf-8').strip()
         print(f"Login response: {response}")  # Отладочный вывод
         if response == "Успешный вход!":
-            self.login_successful.emit(self.client_socket)  # Эмитируем сигнал при успешном входе
+            self.login_successful.emit(self.client_socket)
         else:
             self.show_error_message(response)
 
     def check_register_response(self, message):
+        print(f"Отправка сообщения: {message}")  # Отладочный вывод
         self.client_socket.send(message.encode('utf-8'))
         response = self.client_socket.recv(1024).decode('utf-8').strip()
         print(f"Register response: {response}")  # Отладочный вывод
-        if response == "Успешная регистрация!":
-            self.show_error_message("Регистрация успешна. Теперь вы можете войти.")
-        else:
+        self.login()
+        if not response == "Успешная регистрация!":
             self.show_error_message(response)
 
     def show_error_message(self, message):
