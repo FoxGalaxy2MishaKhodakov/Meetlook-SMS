@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 import mysql.connector
 import bcrypt
 
@@ -12,6 +13,18 @@ db = mysql.connector.connect(
 )
 cursor = db.cursor()
 
+# Подгрузка старых сообщений
+def load_old_messages():
+    cursor.execute("SELECT username, message FROM messages ORDER BY timestamp DESC LIMIT 50")  # получаем последние 50 сообщений
+    return cursor.fetchall()
+
+# Автоудаление сообщений
+def auto_delete_old_messages():
+    while True:
+        cursor.execute("DELETE FROM messages WHERE timestamp < NOW() - INTERVAL 2 DAY")
+        db.commit()
+        time.sleep(86400)  # запускается каждые 24 часа
+        
 def handle_client(client_socket):
     username = None
     while True:
@@ -22,6 +35,12 @@ def handle_client(client_socket):
                 if login(username, password):
                     username = username
                     client_socket.send("Успешный вход!".encode('utf-8'))
+                    
+                    # Подгрузка старых сообщений после успешного входа
+                    old_messages = load_old_messages()
+                    for user, msg in old_messages:
+                        client_socket.send(f"{user}: {msg}\n".encode('utf-8'))
+                    
                 else:
                     client_socket.send("Неверные учетные данные.".encode('utf-8'))
             elif message.startswith("/register"):
@@ -41,6 +60,10 @@ def handle_client(client_socket):
 
     client_socket.close()
     clients.remove(client_socket)
+
+# Запуск автоудаления сообщений в отдельном потоке
+auto_delete_thread = threading.Thread(target=auto_delete_old_messages)
+auto_delete_thread.start()
 
 def broadcast(message):
     for client in clients:
