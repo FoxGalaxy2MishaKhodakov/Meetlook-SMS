@@ -13,6 +13,8 @@ db = mysql.connector.connect(
 )
 cursor = db.cursor()
 
+server_name = "Meetlook SMS Server"
+
 # Загрузка плохих слов из файла
 def load_bad_words():
     with open('badwords.txt', 'r', encoding='utf-8') as file:
@@ -43,6 +45,12 @@ def handle_client(client_socket):
     while True:
         try:
             message = client_socket.recv(1024).decode('utf-8')
+
+            if message == "/get_server_name":
+                client_socket.send(server_name.encode('utf-8'))
+                client_socket.close()
+                return
+
             if message.startswith("/login"):
                 _, username, password = message.split(" ")
                 if login(username, password):
