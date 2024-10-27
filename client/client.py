@@ -10,24 +10,71 @@ class ServerSelectionWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Выбор сервера")
-        self.setGeometry(100, 100, 300, 200)
+        self.setGeometry(100, 100, 400, 500)
 
         self.layout = QtWidgets.QVBoxLayout()
 
+        # Создание списка серверов с прозрачным фоном и без обводки
         self.server_list = QtWidgets.QListWidget()
+        self.server_list.setStyleSheet("QListWidget { background-color: rgba(255, 255, 255, 0); border: none; }")
         self.layout.addWidget(self.server_list)
 
+        # Создание горизонтального макета для кнопок
+        self.button_layout = QtWidgets.QHBoxLayout()
+
+        # Кнопка "Добавить сервер"
         self.add_server_button = QtWidgets.QPushButton("Добавить сервер")
+        self.add_server_button.setStyleSheet("""
+            QPushButton {
+                border-radius: 10px; 
+                background-color: #A5D6A7; 
+                color: white; 
+                padding: 10px; 
+                border: none; 
+            }
+            QPushButton:hover {
+                background-color: #9BCB99;  /* Изменение цвета при наведении */
+            }
+        """)
         self.add_server_button.clicked.connect(self.add_server)
-        self.layout.addWidget(self.add_server_button)
+        self.button_layout.addWidget(self.add_server_button)
 
+        # Кнопка "Удалить сервер"
         self.remove_server_button = QtWidgets.QPushButton("Удалить сервер")
+        self.remove_server_button.setStyleSheet("""
+            QPushButton {
+                border-radius: 10px; 
+                background-color: #A5D6A7; 
+                color: white; 
+                padding: 10px; 
+                border: none; 
+            }
+            QPushButton:hover {
+                background-color: #9BCB99;  /* Изменение цвета при наведении */
+            }
+        """)
         self.remove_server_button.clicked.connect(self.remove_server)
-        self.layout.addWidget(self.remove_server_button)
+        self.button_layout.addWidget(self.remove_server_button)
 
+        # Кнопка "Подключиться"
         self.connect_button = QtWidgets.QPushButton("Подключиться")
+        self.connect_button.setStyleSheet("""
+            QPushButton {
+                border-radius: 10px; 
+                background-color: #A5D6A7; 
+                color: white; 
+                padding: 10px; 
+                border: none; 
+            }
+            QPushButton:hover {
+                background-color: #9BCB99;  /* Изменение цвета при наведении */
+            }
+        """)
         self.connect_button.clicked.connect(self.connect_to_server)
-        self.layout.addWidget(self.connect_button)
+        self.button_layout.addWidget(self.connect_button)
+
+        # Добавление горизонтального макета кнопок в основной макет
+        self.layout.addLayout(self.button_layout)
 
         self.setLayout(self.layout)
         self.load_servers()
@@ -42,14 +89,32 @@ class ServerSelectionWindow(QtWidgets.QWidget):
             with open(servers_file_path, "r") as f:
                 servers = f.readlines()
                 for server in servers:
-                    ip, port = server.strip().split(":")
-                    self.server_list.addItem(f"{ip}:{port}")
+                    server = server.strip()
+                    if server:  # Check if the line is not empty
+                        try:
+                            ip, port = server.split(":")
+                            # Добавление элемента в список серверов с именем сервера
+                            self.server_list.addItem(f"{ip}:{port} ({self.get_server_name(ip, int(port))})")
+                        except ValueError:
+                            print(f"Skipping malformed line: {server}")
+
+    def get_server_name(self, ip, port):
+        try:
+            # Создаем сокет и получаем название сервера
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((ip, port))
+                s.send(b"/get_server_name")
+                server_name = s.recv(1024).decode('utf-8')
+                return server_name
+        except Exception:
+            return "Не удалось получить название сервера"
 
     def add_server(self):
         server_details, ok = QtWidgets.QInputDialog.getText(self, "Добавить сервер", "Введите IP:PORT")
         if ok and server_details:
             ip, port = server_details.split(":")
-            self.server_list.addItem(f"{ip}:{port}")
+            # Добавляем элемент в список с названием сервера
+            self.server_list.addItem(f"{ip}:{port} ({self.get_server_name(ip, int(port))})")
             servers_file_path = self.get_servers_file_path()
             with open(servers_file_path, "a") as f:
                 f.write(f"{ip}:{port}\n")
@@ -69,8 +134,8 @@ class ServerSelectionWindow(QtWidgets.QWidget):
     def connect_to_server(self):
         selected_item = self.server_list.currentItem()
         if selected_item:
-            ip, port = selected_item.text().split(":")
-            self.server_selected.emit(ip, int(port))
+            ip, port = selected_item.text().split(":")[:2]  # Получаем только IP и порт
+            self.server_selected.emit(ip.strip(), int(port.strip().split()[0]))  # Эмитим только IP и порт
             self.close()
 
 class LoginRegisterWindow(QtWidgets.QWidget):
@@ -84,21 +149,61 @@ class LoginRegisterWindow(QtWidgets.QWidget):
 
         self.layout = QtWidgets.QVBoxLayout()
 
+        # Поле ввода имени пользователя
         self.username_input = QtWidgets.QLineEdit()
         self.username_input.setPlaceholderText("Имя пользователя")
+        self.username_input.setStyleSheet("""
+            QLineEdit {
+                border: 2px solid #A5D6A7;  /* Обводка поля */
+                border-radius: 10px;        /* Закругление углов */
+                padding: 5px;               /* Отступ внутри поля */
+            }
+        """)
         self.layout.addWidget(self.username_input)
 
+        # Поле ввода пароля
         self.password_input = QtWidgets.QLineEdit()
         self.password_input.setPlaceholderText("Пароль")
         self.password_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+        self.password_input.setStyleSheet("""
+            QLineEdit {
+                border: 2px solid #A5D6A7;  /* Обводка поля */
+                border-radius: 10px;        /* Закругление углов */
+                padding: 5px;               /* Отступ внутри поля */
+            }
+        """)
         self.layout.addWidget(self.password_input)
 
+        # Кнопка входа
         self.login_button = QtWidgets.QPushButton("Войти")
         self.login_button.clicked.connect(self.login)
+        self.login_button.setStyleSheet("""
+            QPushButton {
+                background-color: #A5D6A7;  /* Цвет кнопки */
+                color: white;               /* Цвет текста */
+                border-radius: 10px;        /* Закругление углов */
+                padding: 10px;              /* Отступ внутри кнопки */
+            }
+            QPushButton:hover {
+                background-color: #9BCB99;  /* Цвет кнопки при наведении */
+            }
+        """)
         self.layout.addWidget(self.login_button)
 
+        # Кнопка регистрации
         self.register_button = QtWidgets.QPushButton("Регистрация")
         self.register_button.clicked.connect(self.register)
+        self.register_button.setStyleSheet("""
+            QPushButton {
+                background-color: #A5D6A7;  /* Цвет кнопки */
+                color: white;               /* Цвет текста */
+                border-radius: 10px;        /* Закругление углов */
+                padding: 10px;              /* Отступ внутри кнопки */
+            }
+            QPushButton:hover {
+                background-color: #9BCB99;  /* Цвет кнопки при наведении */
+            }
+        """)
         self.layout.addWidget(self.register_button)
 
         self.setLayout(self.layout)
@@ -234,7 +339,7 @@ class ChatWindow(QtWidgets.QWidget):
             message_layout.addStretch()
             message_layout.addWidget(message_label)
         else:
-            message_label.setStyleSheet("background-color: #81D4FA; border-radius: 10px; padding: 10px;")
+            message_label.setStyleSheet("background-color: #c4f5c6; border-radius: 10px; padding: 10px;")
             message_layout.addWidget(message_label)
             message_layout.addStretch()
 
