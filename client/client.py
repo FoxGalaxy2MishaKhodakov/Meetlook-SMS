@@ -122,7 +122,6 @@ class ServerSelectionWindow(QtWidgets.QWidget):
                 server_name = s.recv(1024).decode('utf-8')
                 return server_name
         except Exception as e:
-            raise e # TODO: Не забыть удалть
             return "Не удалось получить название сервера"
 
     def add_server(self):
