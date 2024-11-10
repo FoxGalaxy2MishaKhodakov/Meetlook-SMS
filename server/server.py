@@ -1,4 +1,4 @@
-import socket
+import socket, ssl
 import threading
 import time
 import mysql.connector
@@ -41,6 +41,8 @@ def auto_delete_old_messages():
         time.sleep(86400)  # запускается каждые 24 часа
 
 def handle_client(client_socket):
+    # Устанавливаем SSL подключение
+    client_socket = context.wrap_socket(client_socket, server_side=True)
     username = None
     while True:
         try:
@@ -114,6 +116,10 @@ def register(username, password):
 def save_message(username, message):
     cursor.execute("INSERT INTO messages (username, message) VALUES (%s, %s)", (username, message))
     db.commit()
+
+# Загружаем SSL сертификат
+context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+context.load_cert_chain(certfile="cert.crt", keyfile="cert.key")
 
 # Настройка сервера
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
