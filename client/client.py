@@ -1,6 +1,5 @@
-certName = "test"
 import sys
-import socket, ssl
+import socket
 import threading
 from PyQt6 import QtWidgets, QtCore
 import os
@@ -10,7 +9,6 @@ class ServerSelectionWindow(QtWidgets.QWidget):
 
     def __init__(self):
         super().__init__()
-
         self.setWindowTitle("Выбор сервера")
         self.setGeometry(100, 100, 400, 500)
 
@@ -100,28 +98,15 @@ class ServerSelectionWindow(QtWidgets.QWidget):
                         except ValueError:
                             print(f"Skipping malformed line: {server}")
 
-    def get_server_name(self, ip, port, cert=True):
+    def get_server_name(self, ip, port):
         try:
             # Создаем сокет и получаем название сервера
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-
-                if cert:
-                    context = ssl.create_default_context()
-                    context.load_verify_locations("cert.crt")
-                    s = context.wrap_socket(socket.socket(),server_hostname=certName)
-
-                try:
-                    s.connect((ip, port))
-                except ssl.SSLError:
-                    if cert: # Попробуем подключиться без сертификата
-                        return self.get_server_name(ip, port, False) + "  ОТСУСТВУЕТ ШИФРОВАНИЕ"
-                    else: # Что-бы случайно не получилось StackOverflow
-                        raise Exception
-
+                s.connect((ip, port))
                 s.send(b"/get_server_name")
                 server_name = s.recv(1024).decode('utf-8')
                 return server_name
-        except Exception as e:
+        except Exception:
             return "Не удалось получить название сервера"
 
     def add_server(self):
@@ -226,23 +211,13 @@ class LoginRegisterWindow(QtWidgets.QWidget):
         self.client_socket = None
         self.show_message_signal.connect(self.show_error_message)
 
-    def connect_to_server(self, ip, port, cert=True):
+    def connect_to_server(self, ip, port):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        if cert:
-            context = ssl.create_default_context()
-            context.load_verify_locations("cert.crt")
-            self.client_socket = context.wrap_socket(socket.socket(),server_hostname=certName)
-
         try:
             self.client_socket.connect((ip, port))
             self.show()  # Показываем окно логина после подключения к серверу
         except Exception as e:
-            if cert: # Попробуем подключиться без сертификата
-                self.connect_to_server(ip, port, False)
-                return
-            else: # Что-бы случайно не получилось StackOverflow
-                self.show_message_signal.emit(f"Ошибка подключения: {e}")
+            self.show_message_signal.emit(f"Ошибка подключения: {e}")
 
     def login(self):
         username = self.username_input.text()
